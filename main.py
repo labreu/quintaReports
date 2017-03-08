@@ -44,11 +44,13 @@ def get_last_modified():
 def get_report(df_contas):
 
     reports = dict()
+    df_contas.Data = pd.to_datetime(df_contas.Data)
+    df_contas.set_index('Data', inplace=True)
 
-    report = df_contas.tail(50).set_index('Data').to_html(classes=['table', 'table-hover'])
+    report = df_contas.tail(50).sort_index(ascending=False).to_html(classes=['table', 'table-hover'])
     reports['last_n'] = report
 
-    df_contas.index = pd.to_datetime(df_contas.Data)
+
     for i in ['d', 'w', 'm']:
         rp = pd.DataFrame(df_contas.resample(i).sum()['Preço'].tail(7).fillna(0))
         rp.index = rp.index.date
