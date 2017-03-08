@@ -36,7 +36,7 @@ def load_db(t):
 def get_last_modified():
     modified_at = datetime.datetime.fromtimestamp(os.path.getmtime('Banco.db'))
     new_hour = modified_at.hour - 3
-    new_hour = new_hour if new_hour > 0 else (24 - new_hour)
+    new_hour = new_hour if new_hour > 0 else (24 + new_hour)
     modified_at = modified_at.replace(hour=new_hour)
     modified_at = modified_at.strftime('%d/%m/%Y %H:%M')
 
