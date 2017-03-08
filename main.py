@@ -54,6 +54,7 @@ def get_report(df_contas):
     for i in ['d', 'w', 'm']:
         rp = pd.DataFrame(df_contas.resample(i).sum()['Preço'].tail(7).fillna(0))
         rp.index = rp.index.date
+        rp.columns = ['Total']
         reports[i] = rp.T\
             .to_html(classes=['table', 'table-hover'])
         # reports[i] = rp.T.style.background_gradient('winter', axis=1).render()
