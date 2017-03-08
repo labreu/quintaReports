@@ -15,7 +15,9 @@ def load_db(t):
         return
     # Load
     print('Loading data')
-    conn = sqlite3.connect('Banco.db')
+    conn = sqlite3.connect('../OneDrive/Documentos/Banco.db')
+
+
     df_contas = pd.read_sql_query("SELECT * from CONTAS", conn)
     df_contas.DATA = pd.to_datetime(df_contas.DATA, format='%d/%m/%Y %H:%M:%S')
     df_prods = pd.read_sql_query("SELECT * from PRODUTOS", conn, parse_dates=False)
@@ -58,4 +60,4 @@ def hello():
 
 t = None
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')
