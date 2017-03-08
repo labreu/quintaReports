@@ -4,6 +4,8 @@ import threading
 import datetime
 import sqlite3
 import os
+pd.options.display.float_format = 'R${:,.2f}'.format
+
 
 app = Flask(__name__)
 
@@ -40,8 +42,21 @@ def get_last_modified():
 
 
 def get_report(df_contas):
-    report = df_contas.tail(50).set_index('DATA').to_html(classes=['table', 'table-hover'])
-    return report
+
+    reports = dict()
+
+    report = df_contas.tail(50).set_index('Data').to_html(classes=['table', 'table-hover'])
+    reports['last_n'] = report
+
+    df_contas.index = pd.to_datetime(df_contas.Data)
+    for i in ['d', 'w', 'm']:
+        rp = pd.DataFrame(df_contas.resample(i).sum()['Preço'].tail(7).fillna(0))
+        rp.index = rp.index.date
+        reports[i] = rp.T\
+            .to_html(classes=['table', 'table-hover'])
+        # reports[i] = rp.T.style.background_gradient('winter', axis=1).render()
+
+    return reports
 
 
 @app.route("/")
@@ -54,11 +69,10 @@ def hello():
     data = dict()
 
     if os.path.exists('data.csv'):
-        modified_at = get_last_modified()
         df_contas = pd.read_csv('data.csv')
-        print(len(df_contas))
-        data['modified_at'] = modified_at
-        data['table'] = get_report(df_contas)
+        df_contas.columns = ['ID', 'Conta', 'Código Produto', 'Produto', 'Preço', 'Data']
+        data['modified_at'] = get_last_modified()
+        data['reports'] = get_report(df_contas)
         return render_template('main.html', data=data)
     else:
         data['msg'] = 'Carregando..Tente novamente em alguns segundos'

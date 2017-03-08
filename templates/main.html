@@ -8,22 +8,43 @@
     <link href="{{ url_for('static', filename='css/dash.css') }}" rel="stylesheet">
 </head>
 <body>
-    <div class="container-fluid">
-        <h1>Reports</h1>
-        {% if data['modified_at'] %}
-        <h5>Última sincronizaçao: {{data['modified_at']}}</h5>
-        {% endif %}
-        <div class="table-responsive">
-            {% if data['table'] %}
-                {{data['table'] | safe}}
-            {% elif data['contato'] %}
-                <p>lucasribeiroabreu@gmail.com</p>
-            {% else %}
-                <p>{{data['msg']}}</p>
-            {% endif %}
+<div class="container-fluid">
+    <h1>Reports</h1>
+    {% if data['modified_at'] %}
+    <h5>Última sincronizaçao: {{data['modified_at']}}</h5>
+    {% endif %}
 
+    {% if data['reports'] %}
+    <div class="container-fluid">
+        <h4>Últimos dias: </h4>
+
+        <div class="table-responsive">
+            {{data['reports']['d'] | safe}}
+        </div>
+        <h4>Últimas semanas: </h4>
+
+        <div class="table-responsive">
+            {{data['reports']['w'] | safe}}
+        </div>
+        <h4>Últimos meses: </h4>
+
+        <div class="table-responsive">
+            {{data['reports']['m'] | safe}}
+        </div>
+        <h4>Últimas vendas: </h4>
+
+        <div class="table-responsive">
+            {{data['reports']['last_n'] | safe}}
         </div>
     </div>
+    {% elif data['contato'] %}
+    <p>lucasribeiroabreu@gmail.com</p>
+    {% else %}
+    <p>{{data['msg']}}</p>
+    {% endif %}
+
+
+</div>
 </body>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 </html>
