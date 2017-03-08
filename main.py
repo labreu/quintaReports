@@ -31,6 +31,13 @@ def load_db(t):
     return
 
 
+def get_last_modified():
+    modified_at = datetime.datetime.fromtimestamp(os.path.getmtime('Banco.db'))
+    modified_at = modified_at.replace(hour=modified_at.hour-3)
+    modified_at = modified_at.strftime('%d/%m/%Y %H:%M')
+    return modified_at
+
+
 def get_report(df_contas):
     report = df_contas.tail(50).set_index('DATA').to_html(classes=['table', 'table-hover'])
     return report
@@ -46,7 +53,7 @@ def hello():
     data = dict()
 
     if os.path.exists('data.csv'):
-        modified_at = datetime.datetime.fromtimestamp(os.path.getmtime('Banco.db')).strftime('%d/%m/%Y %H:%M')
+        modified_at = get_last_modified()
         df_contas = pd.read_csv('data.csv')
         print(len(df_contas))
         data['modified_at'] = modified_at
