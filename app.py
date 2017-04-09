@@ -1,26 +1,27 @@
 import shutil
-from flask import Flask, redirect, render_template, url_for
+from flask import Flask, redirect, render_template, url_for, jsonify
 import pandas as pd
 import threading
 import datetime
 import sqlite3
 import os
-import time 
+import time
 
 pd.options.display.float_format = 'R${:,.2f}'.format
 
-
 app = Flask(__name__)
 
-def call_load_db():  
+
+def call_load_db():
     print("Iniciando loop")
     c = 0
     while True:
         load_db(c)
         c += 1
 
+
 def load_db(c):
-   
+
     print("Loading db..")
     os.system("onedrive-d restart")
     print("Onedrive restartado")
@@ -42,7 +43,7 @@ def load_db(c):
     # print('Cleaning data')
     df_contas = df_contas[df_contas.DATA >= '2016-01-01']
     df_contas.to_csv('data.csv', quoting=2, index=False)
-  
+
     with open("static/log.txt", "a") as f:
         f.write(", ".join([str(c), "Tamanho:", str(len(df_contas)), str(datetime.datetime.now())]))
         f.write("\n")
@@ -51,51 +52,61 @@ def load_db(c):
     print("Pronto")
     return True
 
-def get_last_modified():
-    try:
-        modified_at = datetime.datetime.fromtimestamp(os.path.getmtime('Banco.db')).strftime('%d/%m/%Y %H:%M')
-    except:
-        pass
-    # print('Last modified: {}'.format(modified_at))
 
-    return modified_at
+def get_report(tempo, qtd):
+    df_contas = read_treat_data()
+
+    if tempo == 1:
+        tempo_encoded = 'd'
+    elif tempo == 2:
+        tempo_encoded = 'w'
+    elif tempo == 3:
+        tempo_encoded = 'm'
+    else:
+        return dict()
+
+    rp = pd.DataFrame(df_contas.resample(tempo_encoded).sum()['Preço'].tail(qtd).fillna(0))
+    rp.index = rp.index.date
+    rp.columns = ['Total']
+    report = rp.T.to_html(classes=['table', 'table-hover'])
+    return report
+
+    # report = df_contas.tail(50).sort_index(ascending=False)[['Conta', 'Código Produto', 'Produto', 'Preço']]\
+    #    .to_html(classes=['table', 'table-hover', 'highchart'])
 
 
-def get_report(df_contas):
-
-    reports = dict()
+def read_treat_data():
+    df_contas = pd.read_csv('data.csv')
+    df_contas.columns = ['ID', 'Conta', 'Código Produto', 'Produto', 'Preço', 'Data']
     df_contas.Data = pd.to_datetime(df_contas.Data)
     df_contas.set_index('Data', inplace=True)
-
-    report = df_contas.tail(50).sort_index(ascending=False)[['Conta', 'Código Produto', 'Produto', 'Preço']].to_html(classes=['table', 'table-hover', 'highchart'])
-   
-    reports['last_n'] = report
+    return df_contas
 
 
-    for i in ['d', 'w', 'm']:
-        rp = pd.DataFrame(df_contas.resample(i).sum()['Preço'].tail(7).fillna(0))
-        rp.index = rp.index.date
-        rp.columns = ['Total']
-        reports[i] = rp.T\
-            .to_html(classes=['table', 'table-hover', 'highchart'])
-        # reports[i] = rp.T.style.background_gradient('winter', axis=1).render()
+@app.route("/time/<int:tempo>/qtd/<int:qtd>")
 
-    return reports
+def rest_report(tempo, qtd):
+    try:
+        if os.path.exists('data.csv'):
+            df = read_treat_data()
+            report = get_report(tempo, qtd)
+
+        return jsonify(
+            {
+                "tempo": tempo,
+                "qtd": qtd,
+                "report": report
+             }
+        )
+    except Exception as e:
+        print(e)
+        return "erro"
 
 
 @app.route("/")
 def hello():
-    data = dict()
+    return render_template('main.html')
 
-    if os.path.exists('data.csv'):
-        df_contas = pd.read_csv('data.csv')
-        df_contas.columns = ['ID', 'Conta', 'Código Produto', 'Produto', 'Preço', 'Data']
-        data['modified_at'] = get_last_modified()
-        data['reports'] = get_report(df_contas)
-        return render_template('main.html', data=data)
-    else:
-        data['msg'] = 'Carregando..Tente novamente em alguns segundos'
-        return render_template('main.html', data=data)
 
 @app.route('/log')
 def root():
@@ -103,9 +114,10 @@ def root():
         return app.send_static_file('log.txt')
     else:
         return "No logs"
-t = threading.Thread(target=call_load_db)
-t.daemon = True
-t.start()
+
+# t = threading.Thread(target=call_load_db)
+# t.daemon = True
+# t.start()
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0')
