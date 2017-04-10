@@ -69,7 +69,9 @@ def get_report(tempo, qtd):
     rp.index = rp.index.date
     rp.columns = ['Total']
     report = rp.T.to_html(classes=['table', 'table-hover'])
-    return report
+    rp.index = rp.index.astype(str)
+    report_json = rp.Total.to_json()
+    return report, report_json
 
     # report = df_contas.tail(50).sort_index(ascending=False)[['Conta', 'Código Produto', 'Produto', 'Preço']]\
     #    .to_html(classes=['table', 'table-hover', 'highchart'])
@@ -89,13 +91,14 @@ def rest_report(tempo, qtd):
     try:
         if os.path.exists('data.csv'):
             df = read_treat_data()
-            report = get_report(tempo, qtd)
+            report, report_json = get_report(tempo, qtd)
 
         return jsonify(
             {
                 "tempo": tempo,
                 "qtd": qtd,
-                "report": report
+                "report": report,
+                "report_json": report_json
              }
         )
     except Exception as e:

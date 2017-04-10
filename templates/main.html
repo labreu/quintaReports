@@ -6,8 +6,7 @@
     <link href="{{ url_for('static', filename='css/bootstrap.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='js/bootstrap.min.js') }}" rel="stylesheet">
     <script src="{{ url_for('static', filename='js/jquery.min.js') }}" type="text/javascript"></script>
-    <script src="{{ url_for('static', filename='js/highcharts.js') }}" type="text/javascript"></script>
-    <script src="{{ url_for('static', filename='js/jquery.highchartTable-min.js') }}" type="text/javascript"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
 </head>
 <body onload="updateTable()">
@@ -30,14 +29,19 @@
 
         </form>
         <br>
-        <div class="text-center" >
+
+        <div class="text-center">
             <input id="qtd" type="number" min="3" max="20" step="1" value="7" onclick="updateTable()"/>
         </div>
         <div class="container-fluid">
             <br>
+
             <p id="dados">
 
             </p>
+
+            <div id="chart_div"></div>
+
         </div>
         <script>
         function updateTable(x) {
@@ -49,12 +53,45 @@
                     var txt = $.ajax({url: "http://0.0.0.0:5000/time/" + (i+1) + "/qtd/" + qtd,
                                       success: function(data) {
                                         document.getElementById("dados").innerHTML = txt.responseJSON.report;
+
+
+                                        // Load the Visualization API and the corechart package.
+                                      google.charts.load('current', {'packages':['corechart']});
+
+                                      // Set a callback to run when the Google Visualization API is loaded.
+                                      google.charts.setOnLoadCallback(drawChart);
+                                       function drawChart() {
+
+        // Create the data table.
+        var data = new google.visualization.DataTable();
+        data.addColumn('string', 'Data');
+        data.addColumn('number', 'R$');
+        var result = [];
+
+        var parsed = JSON.parse(txt.responseJSON.report_json);
+        for(var i in parsed)
+            result.push([i, parsed[i]]);
+        data.addRows(result);
+
+        // Set chart options
+        var options = {'title':'',
+                       'width':1200,
+                       'height':600};
+
+        // Instantiate and draw our chart, passing in some options.
+        var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
+        chart.draw(data, options);
+      }
+
                                         }
                                      })
 
                 }
             }
         }
+
+
+
         </script>
 
     </div>
