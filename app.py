@@ -1,11 +1,10 @@
 import shutil
-from flask import Flask, redirect, render_template, url_for, jsonify
+from flask import Flask, render_template, jsonify
 import pandas as pd
 from threading import Thread
 import datetime
 import sqlite3
 import os
-import time
 
 pd.options.display.float_format = 'R${:,.2f}'.format
 
@@ -14,46 +13,43 @@ app = Flask(__name__)
 
 @app.route("/restartdrive")
 def restartdrive():
-    os.system("onedrive-d restart")
+    try:
+        os.system("onedrive-d restart")
+    except Exception as e:
+        return repr(e)
     return "server restartando"    
 
+
 def load_db():
-    print("Loading db..")
-    c = 1
+
     try:
         os.remove('Banco.db')
+        shutil.copyfile('../OneDrive/Documentos/Banco.db', 'Banco.db')
+        conn = sqlite3.connect('Banco.db')
+        df_contas = pd.read_sql_query("SELECT * from CONTAS", conn)
+        df_contas.DATA = pd.to_datetime(df_contas.DATA, format='%d/%m/%Y %H:%M:%S')
+        # df_prods = pd.read_sql_query("SELECT * from PRODUTOS", conn, parse_dates=False)
+        df_contas.DATA = pd.to_datetime(df_contas.DATA)
+        df_contas = df_contas[df_contas.NOME != 'Excluido']
+        df_contas.index = pd.to_datetime(df_contas.DATA, dayfirst=False, yearfirst=True)
+        df_contas = df_contas[df_contas.DATA >= '2016-01-01']
+        df_contas.to_csv('data.csv', quoting=2, index=False)
+        with open("static/log.txt", "a") as f:
+            f.write(", ".join(["Tamanho:", str(len(df_contas)), str(datetime.datetime.now())]))
+            f.write("\n")
+        return True
+
     except Exception as e:
-        print(e)
+        print(repr(e))
+        with open("debug.txt", 'a') as f:
+            f.write(repr(e))
 
-    print("Copiando arquivo do Banco")
-    shutil.copyfile('../OneDrive/Documentos/Banco.db', 'Banco.db')
-    print("Banco copiado")
-
-    conn = sqlite3.connect('Banco.db')
-
-    df_contas = pd.read_sql_query("SELECT * from CONTAS", conn)
-    df_contas.DATA = pd.to_datetime(df_contas.DATA, format='%d/%m/%Y %H:%M:%S')
-    df_prods = pd.read_sql_query("SELECT * from PRODUTOS", conn, parse_dates=False)
-    print("Tudo certo nas queries")
-    # Clean data
-    df_contas.DATA = pd.to_datetime(df_contas.DATA)
-    df_contas = df_contas[df_contas.NOME != 'Excluido']
-    df_contas.index = pd.to_datetime(df_contas.DATA, dayfirst=False, yearfirst=True)
-    # print('Cleaning data')
-    df_contas = df_contas[df_contas.DATA >= '2016-01-01']
-    df_contas.to_csv('data.csv', quoting=2, index=False)
-
-    with open("static/log.txt", "a") as f:
-        f.write(", ".join([str(c), "Tamanho:", str(len(df_contas)), str(datetime.datetime.now())]))
-        f.write("\n")
-   
-    print("Pronto")
-    return True
+    return "Algo errado: <a href='/debug'>Debug</a>"
 
 
 def get_report(tempo, qtd):
     df_contas = read_treat_data()
-    print("dados tratados")
+
     if tempo == 1:
         tempo_encoded = 'd'
     elif tempo == 2:
@@ -77,7 +73,6 @@ def get_report(tempo, qtd):
 
 def read_treat_data():
     df_contas = pd.read_csv('data.csv')
-    print("read csv funfou")
     df_contas.columns = ['ID', 'Conta', 'Código Produto', 'Produto', 'Preço', 'Data']
     df_contas.Data = pd.to_datetime(df_contas.Data)
     df_contas.set_index('Data', inplace=True)
@@ -87,14 +82,11 @@ def read_treat_data():
 @app.route("/time/<int:tempo>/qtd/<int:qtd>")
 def rest_report(tempo, qtd): 
     try:
-        print("lendo rest")
         if os.path.exists('data.csv'):
-            print("path exists")
-            #df = read_treat_data()
             report, report_json = get_report(tempo, qtd)
-
         else:
             return "nao achei o arquivo"
+
         return jsonify(
             {
                 "tempo": tempo,
@@ -104,20 +96,28 @@ def rest_report(tempo, qtd):
              }
         )
     except Exception as e:
-#        print(e)
+        print(repr(e))
+        with open("debug.txt", 'a') as f:
+            f.write(repr(e))
         return repr(e)
+
 
 @app.route("/debug")
 def debug():
     with open("nohup.out", "r") as f:
-        t = f.readlines()
+        t = '\n'.join(f.readlines())
     return t
+
+
+def get_new_data():
+    t = Thread(target=load_db)
+    t.daemon = True
+    t.start()
+
 
 @app.route("/")
 def hello():
-    t = Thread(target=load_db)
-    t.daemon = True    
-    t.start()
+    get_new_data()
     return render_template('main.html')
 
 
