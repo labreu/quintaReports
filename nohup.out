@@ -1,0 +1,19 @@
+[2017-05-10 01:04:31 +0000] [1353] [INFO] Starting gunicorn 19.7.0
+[2017-05-10 01:04:31 +0000] [1353] [INFO] Listening at: http://127.0.0.1:8000 (1353)
+[2017-05-10 01:04:31 +0000] [1353] [INFO] Using worker: sync
+[2017-05-10 01:04:31 +0000] [1356] [INFO] Booting worker with pid: 1356
+[2017-05-10 01:04:59,846] ERROR in app: Exception on /debug [GET]
+Traceback (most recent call last):
+  File "/home/ubuntu/anaconda3/lib/python3.5/site-packages/flask/app.py", line 1988, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/home/ubuntu/anaconda3/lib/python3.5/site-packages/flask/app.py", line 1642, in full_dispatch_request
+    response = self.make_response(rv)
+  File "/home/ubuntu/anaconda3/lib/python3.5/site-packages/flask/app.py", line 1746, in make_response
+    rv = self.response_class.force_type(rv, request.environ)
+  File "/home/ubuntu/anaconda3/lib/python3.5/site-packages/werkzeug/wrappers.py", line 847, in force_type
+    response = BaseResponse(*_run_wsgi_app(response, environ))
+  File "/home/ubuntu/anaconda3/lib/python3.5/site-packages/werkzeug/wrappers.py", line 57, in _run_wsgi_app
+    return _run_wsgi_app(*args)
+  File "/home/ubuntu/anaconda3/lib/python3.5/site-packages/werkzeug/test.py", line 871, in run_wsgi_app
+    app_rv = app(environ, start_response)
+TypeError: 'list' object is not callable

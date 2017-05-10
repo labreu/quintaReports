@@ -1,7 +1,7 @@
 import shutil
 from flask import Flask, redirect, render_template, url_for, jsonify
 import pandas as pd
-import threading
+from threading import Thread
 import datetime
 import sqlite3
 import os
@@ -12,24 +12,23 @@ pd.options.display.float_format = 'R${:,.2f}'.format
 app = Flask(__name__)
 
 
-def call_load_db():
-    print("Iniciando loop")
-    c = 0
-    while True:
-        load_db(c)
-        c += 1
-
-
-def load_db(c):
-
-    print("Loading db..")
+@app.route("/restartdrive")
+def restartdrive():
     os.system("onedrive-d restart")
-    print("Onedrive restartado")
-    os.remove('Banco.db')
+    return "server restartando"    
+
+def load_db():
+    print("Loading db..")
+    c = 1
+    try:
+        os.remove('Banco.db')
+    except Exception as e:
+        print(e)
+
     print("Copiando arquivo do Banco")
     shutil.copyfile('../OneDrive/Documentos/Banco.db', 'Banco.db')
     print("Banco copiado")
-    print('Conectando ao banco local copiado')
+
     conn = sqlite3.connect('Banco.db')
 
     df_contas = pd.read_sql_query("SELECT * from CONTAS", conn)
@@ -47,15 +46,14 @@ def load_db(c):
     with open("static/log.txt", "a") as f:
         f.write(", ".join([str(c), "Tamanho:", str(len(df_contas)), str(datetime.datetime.now())]))
         f.write("\n")
-    print("Sleeping")
-    time.sleep(60)
+   
     print("Pronto")
     return True
 
 
 def get_report(tempo, qtd):
     df_contas = read_treat_data()
-
+    print("dados tratados")
     if tempo == 1:
         tempo_encoded = 'd'
     elif tempo == 2:
@@ -79,6 +77,7 @@ def get_report(tempo, qtd):
 
 def read_treat_data():
     df_contas = pd.read_csv('data.csv')
+    print("read csv funfou")
     df_contas.columns = ['ID', 'Conta', 'Código Produto', 'Produto', 'Preço', 'Data']
     df_contas.Data = pd.to_datetime(df_contas.Data)
     df_contas.set_index('Data', inplace=True)
@@ -86,13 +85,16 @@ def read_treat_data():
 
 
 @app.route("/time/<int:tempo>/qtd/<int:qtd>")
-
-def rest_report(tempo, qtd):
+def rest_report(tempo, qtd): 
     try:
+        print("lendo rest")
         if os.path.exists('data.csv'):
-            df = read_treat_data()
+            print("path exists")
+            #df = read_treat_data()
             report, report_json = get_report(tempo, qtd)
 
+        else:
+            return "nao achei o arquivo"
         return jsonify(
             {
                 "tempo": tempo,
@@ -102,25 +104,35 @@ def rest_report(tempo, qtd):
              }
         )
     except Exception as e:
-        print(e)
-        return "erro"
+#        print(e)
+        return repr(e)
 
+@app.route("/debug")
+def debug():
+    with open("nohup.out", "r") as f:
+        t = f.readlines()
+    return t
 
 @app.route("/")
 def hello():
+    t = Thread(target=load_db)
+    t.daemon = True    
+    t.start()
     return render_template('main.html')
 
 
 @app.route('/log')
 def root():
     if os.path.exists("static/log.txt"):
-        return app.send_static_file('log.txt')
+        with open('static/log.txt', 'r') as f:
+            lines = f.readlines()
+        return '\n\n, '.join(lines[::-1][:1])
+
+#        return app.send_static_file('log.txt')
     else:
         return "No logs"
 
-# t = threading.Thread(target=call_load_db)
-# t.daemon = True
-# t.start()
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0')
+
